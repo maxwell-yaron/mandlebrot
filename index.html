@@ -31,9 +31,10 @@
       var ymin = kYmin;
       var ymax = kYmax;
       var iter = 50;
-      var INF = 20;
+      var INF = 50;
       var count = 0;
       var zoom_level = 0;
+      var invert = true;
 
       // Map a value to a given range.
       function map(val, minin, maxin, minout, maxout) {
@@ -55,25 +56,72 @@
         draw();
       }
 
-      function getColor(intensity) {
+      function invertColor() {
+        invert=!invert;
+      }
+
+      function getColor(intensity, saturate) {
         var r = 0;
         var g = 0;
         var b = 0;
         var a = 255;
         if(document.getElementById("b/w").checked) {
-          r = intensity;
-          g = intensity;
-          b = intensity;
+          if (!saturate) {
+            r = intensity;
+            g = intensity;
+            b = intensity;
+          } else {
+            r = 255;
+            g = 255;
+            b = 255;
+          }
+        }
+        if(document.getElementById("classic").checked) {
+          if (!saturate) {
+            if (intensity < 128) {
+              r = 0;
+              g = intensity / 1.5;
+              b = intensity;
+            } else if (intensity < 180) {
+              r = 0;
+              g = intensity / 1.4;
+              b = intensity;
+            } else if (intensity < 240) {
+              r = intensity;
+              g = intensity / 1.2;
+              b = 0;
+            } else {
+              r = 255;
+              g = 255;
+              b = 255;
+            }
+          } else {
+            r = 255;
+            g = 255;
+            b = 255;
+          }
         }
         if(document.getElementById("cyan").checked) {
-          r = 0;
-          g = intensity;
-          b = intensity;
+          if (!saturate) {
+            r = 0;
+            g = intensity;
+            b = intensity;
+          } else {
+            r = 200;
+            g = 255;
+            b = 255;
+          }
         }
         if(document.getElementById("red").checked) {
-          r = intensity;
-          g = 0;
-          b = 0;
+          if (!saturate) {
+            r = intensity;
+            g = 0;
+            b = 0;
+          } else {
+            r = 255;
+            g = 200;
+            b = 200;
+          }
         }
         return [r,g,b,a];
       }
@@ -183,12 +231,19 @@
                 break;
               }
             }
-            var intensity = map(n,0,iter,0,255);
-            if (n === iter) {
-              intensity = 0;
-            }
+            var zn = Math.sqrt(Math.abs(a + b));
+            var smoothed = n + 1 - Math.log(Math.log(Math.abs(zn)))/Math.log(2);
+            var intensity = map(smoothed,0,iter,0,255);
+            // smooth value.
             var i = y * width * 4 + x;
-            var color = getColor(intensity);
+            var color = getColor(intensity,false);
+            if (n === iter) {
+              if(invert) {
+                color = [0,0,0,255];
+              } else {
+                color = getColor(intensity,true);
+              }
+            }
             data.data[i] = color[0];
             data.data[i+1] = color[1];
             data.data[i+2] = color[2];
@@ -232,11 +287,13 @@
         <div class="bordered">
           <p class="label"><b>Color:</b></p>
           <form>
+            <p class="label">Classic<input type="radio" name="color" id="classic"></p>
             <p class="label">B/W<input type="radio" name="color" id="b/w"></p>
             <p class="label">Cyan<input type="radio" name="color" id="cyan" checked="true"></p>
             <p class="label">Red<input type="radio" name="color" id="red"></p>
           </form>
         </div>
+        <p class="label">Invert: <input type="checkbox" id="invert" onchange="invertColor()"></p>
         <br>
         <button onclick="reset()">Reset</button>
         <br><br>
