@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <title>Mandlebrot Set</title>
+    <script>
+      var playlist = [
+        "https://www.youtube.com/embed/NQHpVPB3Wxc?autoplay=1",
+        "https://www.youtube.com/embed/Vg-0DFNTBm0?autoplay=1",
+        "https://www.youtube.com/embed/CvFH_6DNRCY?autoplay=1",
+        "https://www.youtube.com/embed/9E6b3swbnWg?autoplay=1",
+        "https://www.youtube.com/embed/P2K7D-uMH2g?autoplay=1",
+        "https://www.youtube.com/embed/R8MzHqkNBwo?autoplay=1",
+      ];
+      
+      function changeMusic() {
+        var video = document.getElementById("music");
+        var idx = Math.floor(Math.random() * (playlist.length));
+        var song = playlist[idx];
+        video.src = song;
+      }
+    </script>
+    <script>
+      // Global constants.
+      var win_size = 500;
+      const kXmin = -2.5;
+      const kXmax = 0.5;
+      const kYmin = -1.5;
+      const kYmax = 1.5;
+      var xmin = kXmin;
+      var xmax = kXmax;
+      var ymin = kYmin;
+      var ymax = kYmax;
+      var iter = 50;
+      var INF = 20;
+      var count = 0;
+      var zoom_level = 0;
+
+      // Map a value to a given range.
+      function map(val, minin, maxin, minout, maxout) {
+        return (val-minin)/(maxin-minin) * (maxout-minout) + minout;
+      }
+
+      // Clamp a value to a given range.
+      function clamp(val, min, max) {
+        return Math.min(Math.max(val,min),max);
+      }
+
+      function reset() {
+        xmin = kXmin;
+        xmax = kXmax;
+        ymin = kYmin;
+        ymax = kYmax;
+        count = 0;
+        zoom_level = 0;
+        draw();
+      }
+
+      function getColor(intensity) {
+        var r = 0;
+        var g = 0;
+        var b = 0;
+        var a = 255;
+        if(document.getElementById("b/w").checked) {
+          r = intensity;
+          g = intensity;
+          b = intensity;
+        }
+        if(document.getElementById("cyan").checked) {
+          r = 0;
+          g = intensity;
+          b = intensity;
+        }
+        if(document.getElementById("red").checked) {
+          r = intensity;
+          g = 0;
+          b = 0;
+        }
+        return [r,g,b,a];
+      }
+    </script>
+    <style>
+    body {
+      background-color: black;
+      overflow: hidden;
+    }
+    #window {
+      background-color: #111111;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      margin: auto;
+    }
+    .label {
+      color: white;
+    }
+    .col1 {
+      float: left;
+    }
+    .col2 {
+      float: right;
+    }
+    .bordered {
+      border: 1px solid white;
+    }
+    </style>
+    <script>
+      function draw(e) {
+        // Get canvas attributes.
+        var elem = document.getElementById('window');
+        var ctx = elem.getContext('2d');
+        ctx.canvas.height = win_size;
+        ctx.canvas.width = win_size;
+        var height = ctx.canvas.height;
+        var width = ctx.canvas.width;
+        var data = ctx.getImageData(0,0,width,height);
+
+        // Get event properties (zoom direction and mouse coords).
+        if(count != 0) {
+          var zoom = -e.deltaY;
+          var rect = elem.getBoundingClientRect();
+          var m_x = e.clientX - rect.left;
+          var m_y = e.clientY - rect.top;
+        }
+
+        // enable adaptive iterations
+        var cb = document.getElementById("check");
+        // Default to low.
+        var iter_step = 5;
+        var max_iter = 300;
+        if(document.getElementById("med").checked) {
+          iter_step = 15;
+          max_iter = 350;
+        }
+        if(document.getElementById("high").checked) {
+          iter_step = 25;
+          max_iter = 500;
+        }
+        iter = clamp(iter_step * zoom_level, 50, max_iter);
+
+        // Rescale frame.
+        if(count != 0) {
+          var scale = 1 - zoom / 100;
+          if(scale < 1) {
+            zoom_level++;
+          } else {
+            zoom_level--;
+          }
+          // Find new window center based on mouse position.
+          var w_x = map(m_x, 0, width, xmin, xmax);
+          var w_y = map(m_y, 0, height, ymin, ymax);
+          var w_width = Math.abs(xmax - xmin) * scale;
+          var w_height = Math.abs(ymax - ymin) * scale;
+
+          xmin = w_x - w_width/2
+          xmax = w_x + w_width/2
+          ymin = w_y - w_height/2
+          ymax = w_y + w_height/2
+          var zoom_text = document.getElementById("zoom");
+          zoom_text.innerHTML = zoom_level;
+          var iter_text = document.getElementById("iters");
+          iter_text.innerHTML = iter;
+        }
+        count++;
+
+        // Iterate over all pixels to draw a given frame.
+        for (var y = 0; y < height; ++y) {
+          for (var x = 0; x < width * 4; x+=4) {
+            var a = map(x/4, 0, width, xmin, xmax);
+            var b = map(y,0,height,ymin,ymax);
+
+            var z = 0;
+            var n = 0;
+            var cx = a;
+            var cy = b;
+            for(n; n < iter; ++n) {
+              real = a * a - b * b;
+              imag = 2 * a * b;
+              a = real + cx;
+              b = imag + cy;
+              if (Math.abs(a + b) > INF) {
+                break;
+              }
+            }
+            var intensity = map(n,0,iter,0,255);
+            if (n === iter) {
+              intensity = 0;
+            }
+            var i = y * width * 4 + x;
+            var color = getColor(intensity);
+            data.data[i] = color[0];
+            data.data[i+1] = color[1];
+            data.data[i+2] = color[2];
+            data.data[i+3] = color[3];
+          }
+        }
+        ctx.putImageData(data,0,0);
+        // Scale to fit window.
+      }
+  </script>
+  <script>
+    function showMessage() {
+      var elem = document.getElementById('window');
+      var ctx = elem.getContext('2d');
+      ctx.font = "20px Arial";
+      ctx.fillStyle = "cyan";
+      ctx.textAlign = "center";
+      ctx.fillText("Start scrolling to enter the Mandlebrot Set", ctx.canvas.width/2, ctx.canvas.height/2);
+    }
+  </script>
+  </head>
+  <body>
+    <div>
+      <div class="col1">
+        <p class="label">Solver Iterations: <span id="iters"></span></p>
+        <p class="label">Resolution: <span id="size"></span></p>
+        <input type="range" min="300" max="1000" value="500" class="slider" id="resSlider">
+        <p class="label">Zoom Level: <span id="zoom"></span></p>
+
+        <br>
+        <div class="bordered">
+          <p class="label"><b>Quality:</b></p>
+          <form>
+            <p class="label">Low (Fast)<input type="radio" name="quality" id="low"></p>
+            <p class="label">Medium<input type="radio" name="quality" id="med" checked="true"></p>
+            <p class="label">High (Slow)<input type="radio" name="quality" id="high"></p>
+          </form>
+        </div>
+
+        <br>
+        <div class="bordered">
+          <p class="label"><b>Color:</b></p>
+          <form>
+            <p class="label">B/W<input type="radio" name="color" id="b/w"></p>
+            <p class="label">Cyan<input type="radio" name="color" id="cyan" checked="true"></p>
+            <p class="label">Red<input type="radio" name="color" id="red"></p>
+          </form>
+        </div>
+        <br>
+        <button onclick="reset()">Reset</button>
+        <br><br>
+        <button onclick="changeMusic()">Change Music</button>
+      </div>
+      <div class "col2">
+        <center>
+          <canvas id="window" width="500" height="500" onwheel="draw(event)"></canvas>
+          <br>
+          <iframe width="100" height="80" id="music"></iframe>
+        </center>
+      </div>
+    </div>
+    <script>
+      showMessage();
+      var size_slider = document.getElementById("resSlider");
+      var size_text = document.getElementById("size");
+      var zoom_text = document.getElementById("zoom");
+      var iter_text = document.getElementById("iters");
+      iter_text.innerHTML = iter;
+      size_text.innerHTML = win_size;
+      zoom.innerHTML = zoom_level;
+      size_slider.oninput = function() {
+        win_size = this.value;
+        size_text.innerHTML = this.value;
+        draw();
+      }
+    </script>
+
+  </body>
+</html>
