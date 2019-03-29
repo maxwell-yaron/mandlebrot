@@ -60,6 +60,56 @@
         invert=!invert;
       }
 
+      function HSVToRGB(h, s, v) {
+        var r;
+        var g;
+        var b;
+        let hd = (h / 60) - Math.floor(h / 60);
+        let c = v * s;
+        let x = c * (1 - Math.abs(((h/60)%2) - 1));
+        var m = v - c;
+        switch (Math.floor((360 - h)/60)) {
+          case(0):
+            r = c;
+            g = x;
+            b = 0;
+            break;
+          case(1):
+            r = x;
+            g = c;
+            b = 0;
+            break;
+          case(2):
+            r = 0;
+            g = c;
+            b = x;
+            break;
+          case(3):
+            r = 0;
+            g = x;
+            b = c;
+            break;
+          case(4):
+            r = x;
+            g = 0;
+            b = c;
+            break;
+          case(5):
+            r = c;
+            g = 0;
+            b = x;
+            break;
+          default:
+            r = v;
+            g = v;
+            b = v;
+        }
+        R = (r + m) * 255;
+        G = (g + m) * 255;
+        B = (b + m) * 255;
+        return [R,G,B];
+      }
+
       function getColor(intensity, saturate) {
         var r = 0;
         var g = 0;
@@ -121,6 +171,19 @@
             r = 255;
             g = 200;
             b = 200;
+          }
+        }
+        if(document.getElementById("hsv").checked) {
+          if (!saturate) {
+            let hue = map(intensity,0,255,0,360);
+            color = HSVToRGB(hue, 0.8, 1.0);
+            r = color[0];
+            g = color[1];
+            b = color[2];
+          } else {
+            r = 255;
+            g = 255;
+            b = 255;
           }
         }
         return [r,g,b,a];
@@ -291,6 +354,7 @@
             <p class="label">B/W<input type="radio" name="color" id="b/w"></p>
             <p class="label">Cyan<input type="radio" name="color" id="cyan" checked="true"></p>
             <p class="label">Red<input type="radio" name="color" id="red"></p>
+            <p class="label">HSV<input type="radio" name="color" id="hsv"></p>
           </form>
         </div>
         <p class="label">Invert: <input type="checkbox" id="invert" onchange="invertColor()"></p>
