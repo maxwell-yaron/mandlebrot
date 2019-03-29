@@ -4,7 +4,7 @@ The goal for this project was to make an interactive mandlebrot set in a single 
 
 This project allows you to zoom into the fractal (slowly) and look at different pieces of it.
 
-If you want a demo of the html you can click [link].
+If you want a demo of the app you can click [link].
 
 ### Current issues include:
 * Maximum zoom level is ~40 for floating point precision reasons.
